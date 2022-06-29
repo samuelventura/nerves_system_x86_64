@@ -1,7 +1,7 @@
 defmodule NervesSystemX8664.MixProject do
   use Mix.Project
 
-  @github_organization "nerves-project"
+  @github_organization "samuelventura"
   @app :nerves_system_x86_64
   @source_url "https://github.com/#{@github_organization}/#{@app}"
   @version Path.join(__DIR__, "VERSION")
@@ -56,7 +56,8 @@ defmodule NervesSystemX8664.MixProject do
         {"TARGET_ARCH", "x86_64"},
         {"TARGET_OS", "linux"},
         {"TARGET_ABI", "musl"},
-        {"TARGET_GCC_FLAGS", "-m64 -fstack-protector-strong -march=nocona -fPIE -pie -Wl,-z,now -Wl,-z,relro"}
+        {"TARGET_GCC_FLAGS",
+         "-m64 -fstack-protector-strong -march=nocona -fPIE -pie -Wl,-z,now -Wl,-z,relro"}
       ],
       checksum: package_files()
     ]

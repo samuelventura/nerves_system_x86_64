@@ -1,0 +1,11 @@
+iex(2)> cmd "mount"
+/dev/root on / type squashfs (ro,relatime)
+devtmpfs on /dev type devtmpfs (rw,nosuid,noexec,relatime,size=1024k,nr_inodes=13948,mode=755)
+proc on /proc type proc (rw,nosuid,nodev,noexec,relatime)
+sysfs on /sys type sysfs (rw,nosuid,nodev,noexec,relatime)
+devpts on /dev/pts type devpts (rw,nosuid,noexec,relatime,gid=5,mode=620,ptmxmode=000)
+tmpfs on /tmp type tmpfs (rw,nosuid,nodev,noexec,relatime,size=11484k)
+tmpfs on /run type tmpfs (rw,nosuid,nodev,noexec,relatime,size=5744k,mode=755)
+/dev/rootdisk0p1 on /boot/grub type vfat (ro,nosuid,nodev,noexec,relatime,fmask=0022,dmask=0022,codepage=437,iocharset=iso8859-1,shortname=mixed,utf8,errors=remount-ro)
+/dev/rootdisk0p4 on /root type ext4 (rw,nodev,relatime)
+0
