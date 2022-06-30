@@ -25,6 +25,10 @@ mix nerves.artifact
 #nerves_system_x86_64-portable-1.20.0-FE304C2.tar.gz
 #nerves_system_x86_64-portable-1.20.0-7F23366.tar.gz
 #nerves_system_x86_64-portable-1.20.0-2B723DD.tar.gz
+#nerves_system_x86_64-portable-1.20.0-D322672.tar.gz
+#nerves_system_x86_64-portable-1.20.0-42F9B85.tar.gz
+#nerves_system_x86_64-portable-1.20.0-1A6EF7F.tar.gz
+#nerves_system_x86_64-portable-1.20.0-C1B11C5.tar.gz
 mv *.tar.gz ~/.nerves/artifacts/
 
 mix nerves.new example #no deps
@@ -55,14 +59,58 @@ sudo qemu-system-x86_64 \
     -net user,hostfwd=tcp::8022-:22 \
     -serial stdio
 
+qemu-virgil -enable-kvm -m 512M \
+    -device virtio-vga,virgl=on -display sdl,gl=on \
+    -drive file=image.img,if=virtio,format=raw \
+    -net nic,model=virtio \
+    -net user,hostfwd=tcp::8022-:22,hostfwd=tcp::3389-:3389 \
+    -serial stdio
+
 #SSH works on first boot (not sure if delayed)
 ssh localhost -p 8022
 NervesMOTD.print
 
+#WESTON RDP
+cd rootfs_overlay/etc
+openssl genrsa -out tls.key 2048
+openssl req -new -key tls.key -out tls.csr
+openssl x509 -req -days 365 -signkey tls.key -in tls.csr -out tls.crt
+File.mkdir("/data/xdg_rt")
+File.chmod("/data/xdg_rt", 0o700)
+System.cmd("weston", ["--backend=rdp-backend.so", "--rdp-tls-key=/etc/tls.key", "--rdp-tls-cert=/etc/tls.crt"], env: [{"XDG_RUNTIME_DIR", "/data/xdg_rt"}])
+cmd "killall weston"
+xfreerdp /sec:tls /v:localhost
+Certificate details for localhost:3389 (RDP-Server):
+        Common Name: Yeico
+        Subject:     C = MX, ST = SLP, L = SLP, O = Yeico, OU = Yeico, CN = Yeico, emailAddress = nerves@yeico.com
+        Issuer:      C = MX, ST = SLP, L = SLP, O = Yeico, OU = Yeico, CN = Yeico, emailAddress = nerves@yeico.com
+        Thumbprint:  cf:c9:3f:e8:cd:70:cf:a8:76:ea:60:67:4f:f9:e4:0c:24:b3:3e:d3:e2:52:46:5b:3b:75:a7:df:71:33:8c:be
+The above X.509 certificate could not be verified, possibly because you do not have
+the CA certificate in your certificate store, or the certificate has expired.
+Please look at the OpenSSL documentation on how to add a private CA to the store.
+#Do you trust the above certificate? (Y/T/N) Y
+#shows a shell with right-top corner date and a left-top (working) terminal shortcut
+#from weston terminal:
+echo $XDG_RUNTIME_DIR -> /data/xdg_rt
+gtk3-demo #works from weston terminal
+granite-demo #segfault settings.vala:87 could not connect: no such file or directory
+#from ssh shell:
+
+System.cmd("weston", ["--tty=1", "--device=/dev/fb0"], env: [{"XDG_RUNTIME_DIR", "/data/xdg_rt"}])
+#could not get launcher fd from environment
+#fatal: failed to create a compositor backend option 'seat', udev device property ID_SEAT
+#https://elinux.org/images/9/93/The-Modern-Linux-Graphics-Stack-on-Embedded-Systems-Michael-Tretter-Pengutronix.pdf
+#https://www.youtube.com/watch?v=GOvbEoOBH98
+
 #https://manpages.ubuntu.com/manpages/bionic/man1/broadwayd.1.html
-cmd "/usr/bin/broadwayd :1"
+#https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
+System.cmd("broadwayd", [":1"], env: [{"XDG_RUNTIME_DIR", "/root"}])
+cmd "killall broadwayd"
 #Gtk-WARNING cannot open display:
-System.cmd("gtk3-demo", [], env: [{"XDG_RUNTIME_DIR", "/root"}, {"GDK_BACKEND", "broadway"}, {"BROADWAY_DISPLAY", ":1"}])
+#Gdk-Message: Trying broadway backend
+#Gdk-Message: Unable to init Broadway server: Could not connect: Connection refused
+System.cmd("gtk3-demo", [], env: [{"XDG_RUNTIME_DIR", "/root"}, {"GDK_BACKEND", "broadway"}, {"GDK_DEBUG", "all"}, {"BROADWAY_DISPLAY", ":1"}])
+#--version {"gtk3-demo 3.24.33\n", 0}
 #GLib-GIO-ERROR: Settings schema 'org.gnome.desktop.interface' is not installed
 #requires package gsettings-desktop-schemas
 #Failed to create /root/.config/glib-2.0/settings: No space left on device
@@ -71,13 +119,19 @@ System.cmd("granite-demo", [], env: [{"XDG_RUNTIME_DIR", "/root"}, {"GDK_BACKEND
 System.cmd("es2gears_wayland", [], env: [{"XDG_RUNTIME_DIR", "/data"}, {"GDK_BACKEND", "broadway"}, {"BROADWAY_DISPLAY", ":1"}])
 File.write("/root/touch.txt", "touch")
 {:error, :enospc}
+#pango-view: When running GraphicsMagick 'gm display' command: Failed to execute child process *gm* (No such file or directory)
+System.cmd("pango-view", ["/root/touch.txt"], env: [{"XDG_RUNTIME_DIR", "/root"}, {"XDG_DATA_DIRS", "/usr/local/share:/usr/share"}, {"GDK_BACKEND", "broadway"}, {"GDK_DEBUG", "all"}, {"BROADWAY_DISPLAY", ":1"}])
 http://127.0.0.1:8081/
 #works on kubuntu, both demos crash on qemu
+#Could not load pixbuf from /org/gtk/libgtk/theme/Adwaita/assets/bullet-symbolic.svg
+#That may indicate that pixbuf loaders or the mime database could not be found
+System.cmd("gtk3-icon-browser", [], env: [{"XDG_RUNTIME_DIR", "/root"}, {"XDG_DATA_DIRS", "/usr/local/share:/usr/share"}, {"GDK_BACKEND", "broadway"}, {"GDK_DEBUG", "all"}, {"BROADWAY_DISPLAY", ":1"}])
+cmd "find /usr -name *bullet*"
 
-#https://elinux.org/images/9/93/The-Modern-Linux-Graphics-Stack-on-Embedded-Systems-Michael-Tretter-Pengutronix.pdf
-#https://www.youtube.com/watch?v=GOvbEoOBH98
-System.cmd("weston", ["--tty=/dev/tty7", "--backend=fbdev-backend.so"], env: [{"XDG_RUNTIME_DIR", "/data"}])
-System.cmd("weston", ["--tty=/dev/tty7"], env: [{"XDG_RUNTIME_DIR", "/data"}])
+samuel@p3420:~$ broadwayd :5
+Listening on /run/user/1000/broadway6.socket
+samuel@p3420:~$ GDK_BACKEND=broadway BROADWAY_DISPLAY=:5 gtk3-demo
+http://localhost:8085/
 
 samuel@p3420:~/src/nerves_system_x86_64/example$ sudo blkid
 /dev/sdc1: SEC_TYPE="msdos" UUID="0021-7A00" TYPE="vfat" PARTUUID="04030201-01"
@@ -122,12 +176,41 @@ make[2]: *** [Makefile:171: all] Error 2
 make[1]: *** [package/pkg-generic.mk:293: /home/samuel/src/nerves_system_x86_64/.nerves/artifacts/nerves_system_x86_64-portable-1.20.0/build/webkitgtk-2.36.3/.stamp_built] Error 2
 make: *** [Makefile:23: _all] Error 2
 
-
 EXT4-fs (vda4): VFS: Can't find ext4 filesystem
 erlinit: Cannot mount /dev/rootdisk0p4 at /root: Invalid argument
 EXT4-fs (vda4): mounted filesystem without journal. Opts: (null)
 ext4 filesystem being mounted at /root supports timestamps until 2038 (0x7fffffff)
 #https://blog.merovius.de/posts/2013-10-20-ext4-mysterious-no-space-left-on/
+
+samuel@p3420:~/src/nerves_system_x86_64/example/rootfs_overlay/etc$ openssl genrsa -out tls.key 2048
+Generating RSA private key, 2048 bit long modulus (2 primes)
+.....+++++
+............................................+++++
+e is 65537 (0x010001)
+samuel@p3420:~/src/nerves_system_x86_64/example/rootfs_overlay/etc$ openssl req -new -key tls.key -out tls.csr
+You are about to be asked to enter information that will be incorporated
+into your certificate request.
+What you are about to enter is what is called a Distinguished Name or a DN.
+There are quite a few fields but you can leave some blank
+For some fields there will be a default value,
+If you enter '.', the field will be left blank.
+-----
+Country Name (2 letter code) [AU]:MX
+State or Province Name (full name) [Some-State]:SLP
+Locality Name (eg, city) []:SLP
+Organization Name (eg, company) [Internet Widgits Pty Ltd]:Yeico
+Organizational Unit Name (eg, section) []:Yeico
+Common Name (e.g. server FQDN or YOUR name) []:Yeico
+Email Address []:nerves@yeico.com
+
+Please enter the following 'extra' attributes
+to be sent with your certificate request
+A challenge password []:
+An optional company name []:
+samuel@p3420:~/src/nerves_system_x86_64/example/rootfs_overlay/etc$ openssl x509 -req -days 365 -signkey tls.key -in tls.csr -out tls.crt
+Signature ok
+subject=C = MX, ST = SLP, L = SLP, O = Yeico, OU = Yeico, CN = Yeico, emailAddress = nerves@yeico.com
+Getting Private key
 
 iex(18)> cmd "df -h"                 
 Filesystem                Size      Used Available Use% Mounted on
