@@ -49,7 +49,7 @@ truncate -s 1G image.img
 qemu-system-x86_64 -enable-kvm -m 512M \
     -drive file=image.img,if=virtio,format=raw \
     -net nic,model=virtio \
-    -net user,hostfwd=tcp::8022-:22,hostfwd=tcp::8081-:8081 \
+    -net user,hostfwd=tcp::8022-:22 \
     -serial stdio
 
 #works as well
@@ -63,7 +63,7 @@ qemu-virgil -enable-kvm -m 512M \
     -device virtio-vga,virgl=on -display sdl,gl=on \
     -drive file=image.img,if=virtio,format=raw \
     -net nic,model=virtio \
-    -net user,hostfwd=tcp::8022-:22,hostfwd=tcp::3389-:3389 \
+    -net user,hostfwd=tcp::8022-:22,hostfwd=tcp::8081-:8081,hostfwd=tcp::3389-:3389 \
     -serial stdio
 
 #SSH works on first boot (not sure if delayed)
@@ -79,7 +79,8 @@ File.mkdir("/data/xdg_rt")
 File.chmod("/data/xdg_rt", 0o700)
 System.cmd("weston", ["--backend=rdp-backend.so", "--rdp-tls-key=/etc/tls.key", "--rdp-tls-cert=/etc/tls.crt"], env: [{"XDG_RUNTIME_DIR", "/data/xdg_rt"}])
 cmd "killall weston"
-xfreerdp /sec:tls /v:localhost
+#multiple sessions connect to same shell
+xfreerdp /sec:tls /v:localhost 
 Certificate details for localhost:3389 (RDP-Server):
         Common Name: Yeico
         Subject:     C = MX, ST = SLP, L = SLP, O = Yeico, OU = Yeico, CN = Yeico, emailAddress = nerves@yeico.com
@@ -94,11 +95,113 @@ Please look at the OpenSSL documentation on how to add a private CA to the store
 echo $XDG_RUNTIME_DIR -> /data/xdg_rt
 gtk3-demo #works from weston terminal
 granite-demo #segfault settings.vala:87 could not connect: no such file or directory
-#from ssh shell:
+
+#WESTON DRM with udevd
+System.cmd("weston", ["--version"])                                                              
+{"weston 10.0.0\n", 0}
+File.mkdir("/data/xdg_rt")
+File.chmod("/data/xdg_rt", 0o700)
+:os.cmd('udevd -d')
+:os.cmd('udevadm trigger --type=subsystems --action=add')
+:os.cmd('udevadm trigger --type=devices --action=add')
+:os.cmd('udevadm settle --timeout=30')
+cmd "libinput list-devices" #must work at this point
+#openvt -e nofork -s switch to vt -w wait cmd finish -c 1 busy
+System.cmd("openvt", ["-v", "-s", "--", "weston", "--backend=drm-backend.so"], env: [{"XDG_RUNTIME_DIR", "/data/xdg_rt"}])
+#from ssh works as well with:
+System.cmd("weston-terminal", [], stderr_to_stdout: true, env: [{"XDG_RUNTIME_DIR", "/data/xdg_rt"}, {"WAYLAND_DISPLAY", "wayland-1"}])
+System.cmd("gtk3-demo", [], stderr_to_stdout: true, env: [{"XDG_RUNTIME_DIR", "/data/xdg_rt"}, {"GDK_BACKEND", "wayland"}, {"WAYLAND_DISPLAY", "wayland-1"}])
+
+#qemu-virgil with udevd
+cmd "libinput list-devices"
+Device:           Power Button
+Kernel:           /dev/input/event0
+Group:            1
+Seat:             seat0, default
+Capabilities:     keyboard 
+Tap-to-click:     n/a
+Tap-and-drag:     n/a
+Tap drag lock:    n/a
+Left-handed:      n/a
+Nat.scrolling:    n/a
+Middle emulation: n/a
+Calibration:      n/a
+Scroll methods:   none
+Click methods:    none
+Disable-w-typing: n/a
+Accel profiles:   n/a
+Rotation:         n/a
+
+Device:           AT Translated Set 2 keyboard
+Kernel:           /dev/input/event1
+Group:            2
+Seat:             seat0, default
+Capabilities:     keyboard 
+Tap-to-click:     n/a
+Tap-and-drag:     n/a
+Tap drag lock:    n/a
+Left-handed:      n/a
+Nat.scrolling:    n/a
+Middle emulation: n/a
+Calibration:      n/a
+Scroll methods:   none
+Click methods:    none
+Disable-w-typing: n/a
+Accel profiles:   n/a
+Rotation:         n/a
+
+Device:           ImExPS/2 Generic Explorer Mouse
+Kernel:           /dev/input/event2
+Group:            3
+Seat:             seat0, default
+Capabilities:     pointer 
+Tap-to-click:     n/a
+Tap-and-drag:     n/a
+Tap drag lock:    n/a
+Left-handed:      disabled
+Nat.scrolling:    disabled
+Middle emulation: disabled
+Calibration:      n/a
+Scroll methods:   button
+Click methods:    none
+Disable-w-typing: n/a
+Accel profiles:   flat *adaptive
+Rotation:         n/a
+
+0
+
+#from weston env > /data/env.txt
+iex(27)> cmd "cat /data/env.txt"
+LANGUAGE=en
+HOME=/root
+ERL_INETRC=/etc/erl_inetrc
+EMU=beam
+PROGNAME=erlexec
+COLORTERM=xterm
+BINDIR=/srv/erlang/erts-13.0.2/bin
+HEART_BEAT_TIMEOUT=30
+WAYLAND_DISPLAY=wayland-1
+ERL_CRASH_DUMP=/root/crash.dump
+RELEASE_TMP=/tmp
+RELEASE_SYS_CONFIG=/srv/erlang/releases/0.1.0/sys
+TERM=xterm
+WESTON_CONFIG_FILE=
+BOOT_IMAGE=(hd0,msdos2)/boot/bzImage
+PATH=/srv/erlang/erts-13.0.2/bin:/srv/erlang/bin:/usr/sbin:/usr/bin:/sbin:/bin
+RELEASE_ROOT=/srv/erlang
+XDG_RUNTIME_DIR=/data/xdg_rt
+LANG=en_US.UTF-8
+ROOTDIR=/srv/erlang
+PWD=/srv/erlang
+0
+
+#fatal: failed to create a compositor backend option 'seat', udev device property ID_SEAT
+#https://gitlab.freedesktop.org/wayland/weston
+#https://wayland.freedesktop.org/libinput/doc/latest/seats.html
+#https://manpages.ubuntu.com/manpages/bionic/man1/libinput-list-devices.1.html
 
 System.cmd("weston", ["--tty=1", "--device=/dev/fb0"], env: [{"XDG_RUNTIME_DIR", "/data/xdg_rt"}])
 #could not get launcher fd from environment
-#fatal: failed to create a compositor backend option 'seat', udev device property ID_SEAT
 #https://elinux.org/images/9/93/The-Modern-Linux-Graphics-Stack-on-Embedded-Systems-Michael-Tretter-Pengutronix.pdf
 #https://www.youtube.com/watch?v=GOvbEoOBH98
 
@@ -403,3 +506,435 @@ S     0    89    45  2420   248 0:0   02:16 00:00:00 /srv/erlang/lib/muontrap-1.
 S     0    90    89  2784   264 0:0   02:16 00:00:00 /sbin/udhcpc -f -i eth0 -x hostname:wxkiosk-3456 -s /srv/erlang/lib/beam_notif
 R     0   126    45  2784   260 0:0   02:19 00:00:00 ps -wlT
 0
+
+iex(11)> cmd "/sbin/udevadm info -p /dev/char/13:64"
+P: /devices/LNXSYSTM:00/LNXPWRBN:00/input/input0/event0
+N: input/event0
+E: DEVNAME=/dev/input/event0
+E: DEVPATH=/devices/LNXSYSTM:00/LNXPWRBN:00/input/input0/event0
+E: MAJOR=13
+E: MINOR=64
+E: SUBSYSTEM=input
+
+0
+iex(12)> cmd "/sbin/udevadm info -p /dev/char/13:65"
+P: /devices/platform/i8042/serio0/input/input1/event1
+N: input/event1
+E: DEVNAME=/dev/input/event1
+E: DEVPATH=/devices/platform/i8042/serio0/input/input1/event1
+E: MAJOR=13
+E: MINOR=65
+E: SUBSYSTEM=input
+
+0
+iex(13)> cmd "/sbin/udevadm info -p /dev/char/13:66"
+P: /devices/platform/i8042/serio1/input/input3/event2
+N: input/event2
+E: DEVNAME=/dev/input/event2
+E: DEVPATH=/devices/platform/i8042/serio1/input/input3/event2
+E: MAJOR=13
+E: MINOR=66
+E: SUBSYSTEM=input
+
+0
+
+samuel@p3420:~/src/nerves_system_x86_64/example$ ls -l /sys/dev/char/ | grep event3
+lrwxrwxrwx 1 root root 0 jun 29 16:24 13:67 -> ../../devices/pci0000:00/0000:00:14.0/usb1/1-5/1-5:1.0/0003:046D:C077.0001/input/input6/event3
+samuel@p3420:~/src/nerves_system_x86_64/example$ udevadm info -a -p dev/char/13:67
+
+Udevadm info starts with the device specified by the devpath and then
+walks up the chain of parent devices. It prints for every device
+found, all possible attributes in the udev rules key format.
+A rule to match, can be composed by the attributes of the device
+and the attributes from one single parent device.
+
+  looking at device '/devices/pci0000:00/0000:00:14.0/usb1/1-5/1-5:1.0/0003:046D:C077.0001/input/input6/event3':
+    KERNEL=="event3"
+    SUBSYSTEM=="input"
+    DRIVER==""
+
+  looking at parent device '/devices/pci0000:00/0000:00:14.0/usb1/1-5/1-5:1.0/0003:046D:C077.0001/input/input6':
+    KERNELS=="input6"
+    SUBSYSTEMS=="input"
+    DRIVERS==""
+    ATTRS{properties}=="0"
+    ATTRS{uniq}==""
+    ATTRS{inhibited}=="0"
+    ATTRS{phys}=="usb-0000:00:14.0-5/input0"
+    ATTRS{name}=="Logitech USB Optical Mouse"
+
+  looking at parent device '/devices/pci0000:00/0000:00:14.0/usb1/1-5/1-5:1.0/0003:046D:C077.0001':
+    KERNELS=="0003:046D:C077.0001"
+    SUBSYSTEMS=="hid"
+    DRIVERS=="hid-generic"
+    ATTRS{country}=="00"
+
+  looking at parent device '/devices/pci0000:00/0000:00:14.0/usb1/1-5/1-5:1.0':
+    KERNELS=="1-5:1.0"
+    SUBSYSTEMS=="usb"
+    DRIVERS=="usbhid"
+    ATTRS{bInterfaceClass}=="03"
+    ATTRS{bInterfaceNumber}=="00"
+    ATTRS{bNumEndpoints}=="01"
+    ATTRS{bAlternateSetting}==" 0"
+    ATTRS{bInterfaceProtocol}=="02"
+    ATTRS{supports_autosuspend}=="1"
+    ATTRS{authorized}=="1"
+    ATTRS{bInterfaceSubClass}=="01"
+
+  looking at parent device '/devices/pci0000:00/0000:00:14.0/usb1/1-5':
+    KERNELS=="1-5"
+    SUBSYSTEMS=="usb"
+    DRIVERS=="usb"
+    ATTRS{authorized}=="1"
+    ATTRS{speed}=="1.5"
+    ATTRS{configuration}==""
+    ATTRS{rx_lanes}=="1"
+    ATTRS{avoid_reset_quirk}=="0"
+    ATTRS{maxchild}=="0"
+    ATTRS{quirks}=="0x0"
+    ATTRS{devnum}=="2"
+    ATTRS{bDeviceProtocol}=="00"
+    ATTRS{tx_lanes}=="1"
+    ATTRS{bcdDevice}=="7200"
+    ATTRS{bmAttributes}=="a0"
+    ATTRS{bNumConfigurations}=="1"
+    ATTRS{product}=="USB Optical Mouse"
+    ATTRS{bConfigurationValue}=="1"
+    ATTRS{bNumInterfaces}==" 1"
+    ATTRS{bMaxPower}=="100mA"
+    ATTRS{bMaxPacketSize0}=="8"
+    ATTRS{bDeviceClass}=="00"
+    ATTRS{ltm_capable}=="no"
+    ATTRS{devpath}=="5"
+    ATTRS{urbnum}=="374200"
+    ATTRS{idVendor}=="046d"
+    ATTRS{bDeviceSubClass}=="00"
+    ATTRS{version}==" 2.00"
+    ATTRS{idProduct}=="c077"
+    ATTRS{manufacturer}=="Logitech"
+    ATTRS{busnum}=="1"
+    ATTRS{removable}=="removable"
+
+  looking at parent device '/devices/pci0000:00/0000:00:14.0/usb1':
+    KERNELS=="usb1"
+    SUBSYSTEMS=="usb"
+    DRIVERS=="usb"
+    ATTRS{interface_authorized_default}=="1"
+    ATTRS{serial}=="0000:00:14.0"
+    ATTRS{bmAttributes}=="e0"
+    ATTRS{manufacturer}=="Linux 5.13.0-51-generic xhci-hcd"
+    ATTRS{bConfigurationValue}=="1"
+    ATTRS{ltm_capable}=="no"
+    ATTRS{speed}=="480"
+    ATTRS{bMaxPower}=="0mA"
+    ATTRS{maxchild}=="16"
+    ATTRS{bMaxPacketSize0}=="64"
+    ATTRS{busnum}=="1"
+    ATTRS{idVendor}=="1d6b"
+    ATTRS{devnum}=="1"
+    ATTRS{avoid_reset_quirk}=="0"
+    ATTRS{tx_lanes}=="1"
+    ATTRS{removable}=="unknown"
+    ATTRS{authorized_default}=="1"
+    ATTRS{urbnum}=="68"
+    ATTRS{idProduct}=="0002"
+    ATTRS{bDeviceProtocol}=="01"
+    ATTRS{authorized}=="1"
+    ATTRS{configuration}==""
+    ATTRS{bNumConfigurations}=="1"
+    ATTRS{bNumInterfaces}==" 1"
+    ATTRS{bDeviceSubClass}=="00"
+    ATTRS{rx_lanes}=="1"
+    ATTRS{version}==" 2.00"
+    ATTRS{devpath}=="0"
+    ATTRS{quirks}=="0x0"
+    ATTRS{product}=="xHCI Host Controller"
+    ATTRS{bcdDevice}=="0513"
+    ATTRS{bDeviceClass}=="09"
+
+  looking at parent device '/devices/pci0000:00/0000:00:14.0':
+    KERNELS=="0000:00:14.0"
+    SUBSYSTEMS=="pci"
+    DRIVERS=="xhci_hcd"
+    ATTRS{enable}=="1"
+    ATTRS{local_cpus}=="ff"
+    ATTRS{subsystem_vendor}=="0x1028"
+    ATTRS{numa_node}=="-1"
+    ATTRS{msi_bus}=="1"
+    ATTRS{revision}=="0x31"
+    ATTRS{ari_enabled}=="0"
+    ATTRS{power_state}=="D0"
+    ATTRS{dma_mask_bits}=="64"
+    ATTRS{subsystem_device}=="0x06c7"
+    ATTRS{local_cpulist}=="0-7"
+    ATTRS{broken_parity_status}=="0"
+    ATTRS{device}=="0xa12f"
+    ATTRS{consistent_dma_mask_bits}=="64"
+    ATTRS{irq}=="123"
+    ATTRS{d3cold_allowed}=="1"
+    ATTRS{dbc}=="disabled"
+    ATTRS{class}=="0x0c0330"
+    ATTRS{driver_override}=="(null)"
+    ATTRS{vendor}=="0x8086"
+
+  looking at parent device '/devices/pci0000:00':
+    KERNELS=="pci0000:00"
+    SUBSYSTEMS==""
+    DRIVERS==""
+    ATTRS{waiting_for_supplier}=="0"
+
+sudo apt install libinput-tools
+sudo libinput list-devices
+Device:           Power Button
+Kernel:           /dev/input/event2
+Group:            1
+Seat:             seat0, default
+Capabilities:     keyboard 
+Tap-to-click:     n/a
+Tap-and-drag:     n/a
+Tap drag lock:    n/a
+Left-handed:      n/a
+Nat.scrolling:    n/a
+Middle emulation: n/a
+Calibration:      n/a
+Scroll methods:   none
+Click methods:    none
+Disable-w-typing: n/a
+Accel profiles:   n/a
+Rotation:         n/a
+
+Device:           Power Button
+Kernel:           /dev/input/event1
+Group:            2
+Seat:             seat0, default
+Capabilities:     keyboard 
+Tap-to-click:     n/a
+Tap-and-drag:     n/a
+Tap drag lock:    n/a
+Left-handed:      n/a
+Nat.scrolling:    n/a
+Middle emulation: n/a
+Calibration:      n/a
+Scroll methods:   none
+Click methods:    none
+Disable-w-typing: n/a
+Accel profiles:   n/a
+Rotation:         n/a
+
+Device:           Sleep Button
+Kernel:           /dev/input/event0
+Group:            3
+Seat:             seat0, default
+Capabilities:     keyboard 
+Tap-to-click:     n/a
+Tap-and-drag:     n/a
+Tap drag lock:    n/a
+Left-handed:      n/a
+Nat.scrolling:    n/a
+Middle emulation: n/a
+Calibration:      n/a
+Scroll methods:   none
+Click methods:    none
+Disable-w-typing: n/a
+Accel profiles:   n/a
+Rotation:         n/a
+
+Device:           HDA NVidia HDMI/DP,pcm=3
+Kernel:           /dev/input/event9
+Group:            4
+Seat:             seat0, default
+Capabilities:     
+Tap-to-click:     n/a
+Tap-and-drag:     n/a
+Tap drag lock:    n/a
+Left-handed:      n/a
+Nat.scrolling:    n/a
+Middle emulation: n/a
+Calibration:      n/a
+Scroll methods:   none
+Click methods:    none
+Disable-w-typing: n/a
+Accel profiles:   n/a
+Rotation:         n/a
+
+Device:           HDA NVidia HDMI/DP,pcm=7
+Kernel:           /dev/input/event10
+Group:            4
+Seat:             seat0, default
+Capabilities:     
+Tap-to-click:     n/a
+Tap-and-drag:     n/a
+Tap drag lock:    n/a
+Left-handed:      n/a
+Nat.scrolling:    n/a
+Middle emulation: n/a
+Calibration:      n/a
+Scroll methods:   none
+Click methods:    none
+Disable-w-typing: n/a
+Accel profiles:   n/a
+Rotation:         n/a
+
+Device:           HDA NVidia HDMI/DP,pcm=8
+Kernel:           /dev/input/event11
+Group:            4
+Seat:             seat0, default
+Capabilities:     
+Tap-to-click:     n/a
+Tap-and-drag:     n/a
+Tap drag lock:    n/a
+Left-handed:      n/a
+Nat.scrolling:    n/a
+Middle emulation: n/a
+Calibration:      n/a
+Scroll methods:   none
+Click methods:    none
+Disable-w-typing: n/a
+Accel profiles:   n/a
+Rotation:         n/a
+
+Device:           HDA NVidia HDMI/DP,pcm=9
+Kernel:           /dev/input/event12
+Group:            4
+Seat:             seat0, default
+Capabilities:     
+Tap-to-click:     n/a
+Tap-and-drag:     n/a
+Tap drag lock:    n/a
+Left-handed:      n/a
+Nat.scrolling:    n/a
+Middle emulation: n/a
+Calibration:      n/a
+Scroll methods:   none
+Click methods:    none
+Disable-w-typing: n/a
+Accel profiles:   n/a
+Rotation:         n/a
+
+Device:           HDA NVidia HDMI/DP,pcm=10
+Kernel:           /dev/input/event13
+Group:            4
+Seat:             seat0, default
+Capabilities:     
+Tap-to-click:     n/a
+Tap-and-drag:     n/a
+Tap drag lock:    n/a
+Left-handed:      n/a
+Nat.scrolling:    n/a
+Middle emulation: n/a
+Calibration:      n/a
+Scroll methods:   none
+Click methods:    none
+Disable-w-typing: n/a
+Accel profiles:   n/a
+Rotation:         n/a
+
+Device:           Logitech USB Optical Mouse
+Kernel:           /dev/input/event3
+Group:            5
+Seat:             seat0, default
+Capabilities:     pointer 
+Tap-to-click:     n/a
+Tap-and-drag:     n/a
+Tap drag lock:    n/a
+Left-handed:      disabled
+Nat.scrolling:    disabled
+Middle emulation: disabled
+Calibration:      n/a
+Scroll methods:   button
+Click methods:    none
+Disable-w-typing: n/a
+Accel profiles:   flat *adaptive
+Rotation:         n/a
+
+Device:           Corsair Corsair Gaming K65 RGB RAPIDFIRE Keyboard 
+Kernel:           /dev/input/event4
+Group:            6
+Seat:             seat0, default
+Capabilities:     keyboard 
+Tap-to-click:     n/a
+Tap-and-drag:     n/a
+Tap drag lock:    n/a
+Left-handed:      n/a
+Nat.scrolling:    n/a
+Middle emulation: n/a
+Calibration:      n/a
+Scroll methods:   none
+Click methods:    none
+Disable-w-typing: n/a
+Accel profiles:   n/a
+Rotation:         n/a
+
+Device:           Corsair Corsair Gaming K65 RGB RAPIDFIRE Keyboard  Keyboard
+Kernel:           /dev/input/event5
+Group:            6
+Seat:             seat0, default
+Capabilities:     keyboard pointer 
+Tap-to-click:     n/a
+Tap-and-drag:     n/a
+Tap drag lock:    n/a
+Left-handed:      n/a
+Nat.scrolling:    disabled
+Middle emulation: n/a
+Calibration:      n/a
+Scroll methods:   none
+Click methods:    none
+Disable-w-typing: n/a
+Accel profiles:   n/a
+Rotation:         n/a
+
+Device:           HDA Intel PCH Headphone Mic
+Kernel:           /dev/input/event14
+Group:            4
+Seat:             seat0, default
+Capabilities:     
+Tap-to-click:     n/a
+Tap-and-drag:     n/a
+Tap drag lock:    n/a
+Left-handed:      n/a
+Nat.scrolling:    n/a
+Middle emulation: n/a
+Calibration:      n/a
+Scroll methods:   none
+Click methods:    none
+Disable-w-typing: n/a
+Accel profiles:   n/a
+Rotation:         n/a
+
+Device:           HDA Intel PCH Line Out
+Kernel:           /dev/input/event15
+Group:            4
+Seat:             seat0, default
+Capabilities:     
+Tap-to-click:     n/a
+Tap-and-drag:     n/a
+Tap drag lock:    n/a
+Left-handed:      n/a
+Nat.scrolling:    n/a
+Middle emulation: n/a
+Calibration:      n/a
+Scroll methods:   none
+Click methods:    none
+Disable-w-typing: n/a
+Accel profiles:   n/a
+Rotation:         n/a
+
+Device:           Dell WMI hotkeys
+Kernel:           /dev/input/event8
+Group:            7
+Seat:             seat0, default
+Capabilities:     keyboard 
+Tap-to-click:     n/a
+Tap-and-drag:     n/a
+Tap drag lock:    n/a
+Left-handed:      n/a
+Nat.scrolling:    n/a
+Middle emulation: n/a
+Calibration:      n/a
+Scroll methods:   none
+Click methods:    none
+Disable-w-typing: n/a
+Accel profiles:   n/a
+Rotation:         n/a
+
