@@ -109,8 +109,48 @@ cmd "libinput list-devices" #must work at this point
 #openvt -e nofork -s switch to vt -w wait cmd finish -c 1 busy
 System.cmd("openvt", ["-v", "-s", "--", "weston", "--backend=drm-backend.so"], env: [{"XDG_RUNTIME_DIR", "/data/xdg_rt"}])
 #from ssh works as well with:
-System.cmd("weston-terminal", [], stderr_to_stdout: true, env: [{"XDG_RUNTIME_DIR", "/data/xdg_rt"}, {"WAYLAND_DISPLAY", "wayland-1"}])
 System.cmd("gtk3-demo", [], stderr_to_stdout: true, env: [{"XDG_RUNTIME_DIR", "/data/xdg_rt"}, {"GDK_BACKEND", "wayland"}, {"WAYLAND_DISPLAY", "wayland-1"}])
+System.cmd("weston-terminal", [], stderr_to_stdout: true, env: [{"XDG_RUNTIME_DIR", "/data/xdg_rt"}, {"WAYLAND_DISPLAY", "wayland-1"}])
+#https://wayland.freedesktop.org/building.html weston deps, rtenv, and demos
+#working demos: weston-flower, weston-smoke
+
+#BROADWAY
+System.cmd("broadwayd", [":1"], env: [{"XDG_RUNTIME_DIR", "/data/xdg_rt"}])
+System.cmd("gtk3-demo", [], stderr_to_stdout: true, env: [{"GTK_DEBUG", "all"}, {"GDK_DEBUG", "all"}, {"XDG_RUNTIME_DIR", "/data/xdg_rt"}, {"GDK_BACKEND", "broadway"}, {"BROADWAY_DISPLAY", ":1"}, {"UBUNTU_MENUPROXY", ""}, {"LIBOVERLAY_SCROLLBAR", "0"}])
+
+iex(20)> cmd "gtk3-demo --version"       
+gtk3-demo 3.24.33
+
+#https://manpages.ubuntu.com/manpages/bionic/man1/broadwayd.1.html
+#https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
+System.cmd("broadwayd", [":1"], env: [{"XDG_RUNTIME_DIR", "/root"}])
+cmd "killall broadwayd"
+#Gtk-WARNING cannot open display:
+#Gdk-Message: Trying broadway backend
+#Gdk-Message: Unable to init Broadway server: Could not connect: Connection refused
+System.cmd("gtk3-demo", [], env: [{"XDG_RUNTIME_DIR", "/root"}, {"GDK_BACKEND", "broadway"}, {"GDK_DEBUG", "all"}, {"BROADWAY_DISPLAY", ":1"}])
+#--version {"gtk3-demo 3.24.33\n", 0}
+#GLib-GIO-ERROR: Settings schema 'org.gnome.desktop.interface' is not installed
+#requires package gsettings-desktop-schemas
+#Failed to create /root/.config/glib-2.0/settings: No space left on device
+System.cmd("granite-demo", [], env: [{"XDG_RUNTIME_DIR", "/root"}, {"GDK_BACKEND", "broadway"}, {"BROADWAY_DISPLAY", ":1"}])
+#EGLUT failed to initialize native display
+System.cmd("es2gears_wayland", [], env: [{"XDG_RUNTIME_DIR", "/data"}, {"GDK_BACKEND", "broadway"}, {"BROADWAY_DISPLAY", ":1"}])
+File.write("/root/touch.txt", "touch")
+{:error, :enospc}
+#pango-view: When running GraphicsMagick 'gm display' command: Failed to execute child process *gm* (No such file or directory)
+System.cmd("pango-view", ["/root/touch.txt"], env: [{"XDG_RUNTIME_DIR", "/root"}, {"XDG_DATA_DIRS", "/usr/local/share:/usr/share"}, {"GDK_BACKEND", "broadway"}, {"GDK_DEBUG", "all"}, {"BROADWAY_DISPLAY", ":1"}])
+http://127.0.0.1:8081/
+#works on kubuntu, both demos crash on qemu
+#Could not load pixbuf from /org/gtk/libgtk/theme/Adwaita/assets/bullet-symbolic.svg
+#That may indicate that pixbuf loaders or the mime database could not be found
+System.cmd("gtk3-icon-browser", [], env: [{"XDG_RUNTIME_DIR", "/root"}, {"XDG_DATA_DIRS", "/usr/local/share:/usr/share"}, {"GDK_BACKEND", "broadway"}, {"GDK_DEBUG", "all"}, {"BROADWAY_DISPLAY", ":1"}])
+cmd "find /usr -name *bullet*"
+
+samuel@p3420:~$ broadwayd :5
+Listening on /run/user/1000/broadway6.socket
+samuel@p3420:~$ GDK_BACKEND=broadway BROADWAY_DISPLAY=:5 gtk3-demo
+http://localhost:8085/
 
 #qemu-virgil with udevd
 cmd "libinput list-devices"
@@ -204,37 +244,6 @@ System.cmd("weston", ["--tty=1", "--device=/dev/fb0"], env: [{"XDG_RUNTIME_DIR",
 #could not get launcher fd from environment
 #https://elinux.org/images/9/93/The-Modern-Linux-Graphics-Stack-on-Embedded-Systems-Michael-Tretter-Pengutronix.pdf
 #https://www.youtube.com/watch?v=GOvbEoOBH98
-
-#https://manpages.ubuntu.com/manpages/bionic/man1/broadwayd.1.html
-#https://specifications.freedesktop.org/basedir-spec/basedir-spec-latest.html
-System.cmd("broadwayd", [":1"], env: [{"XDG_RUNTIME_DIR", "/root"}])
-cmd "killall broadwayd"
-#Gtk-WARNING cannot open display:
-#Gdk-Message: Trying broadway backend
-#Gdk-Message: Unable to init Broadway server: Could not connect: Connection refused
-System.cmd("gtk3-demo", [], env: [{"XDG_RUNTIME_DIR", "/root"}, {"GDK_BACKEND", "broadway"}, {"GDK_DEBUG", "all"}, {"BROADWAY_DISPLAY", ":1"}])
-#--version {"gtk3-demo 3.24.33\n", 0}
-#GLib-GIO-ERROR: Settings schema 'org.gnome.desktop.interface' is not installed
-#requires package gsettings-desktop-schemas
-#Failed to create /root/.config/glib-2.0/settings: No space left on device
-System.cmd("granite-demo", [], env: [{"XDG_RUNTIME_DIR", "/root"}, {"GDK_BACKEND", "broadway"}, {"BROADWAY_DISPLAY", ":1"}])
-#EGLUT failed to initialize native display
-System.cmd("es2gears_wayland", [], env: [{"XDG_RUNTIME_DIR", "/data"}, {"GDK_BACKEND", "broadway"}, {"BROADWAY_DISPLAY", ":1"}])
-File.write("/root/touch.txt", "touch")
-{:error, :enospc}
-#pango-view: When running GraphicsMagick 'gm display' command: Failed to execute child process *gm* (No such file or directory)
-System.cmd("pango-view", ["/root/touch.txt"], env: [{"XDG_RUNTIME_DIR", "/root"}, {"XDG_DATA_DIRS", "/usr/local/share:/usr/share"}, {"GDK_BACKEND", "broadway"}, {"GDK_DEBUG", "all"}, {"BROADWAY_DISPLAY", ":1"}])
-http://127.0.0.1:8081/
-#works on kubuntu, both demos crash on qemu
-#Could not load pixbuf from /org/gtk/libgtk/theme/Adwaita/assets/bullet-symbolic.svg
-#That may indicate that pixbuf loaders or the mime database could not be found
-System.cmd("gtk3-icon-browser", [], env: [{"XDG_RUNTIME_DIR", "/root"}, {"XDG_DATA_DIRS", "/usr/local/share:/usr/share"}, {"GDK_BACKEND", "broadway"}, {"GDK_DEBUG", "all"}, {"BROADWAY_DISPLAY", ":1"}])
-cmd "find /usr -name *bullet*"
-
-samuel@p3420:~$ broadwayd :5
-Listening on /run/user/1000/broadway6.socket
-samuel@p3420:~$ GDK_BACKEND=broadway BROADWAY_DISPLAY=:5 gtk3-demo
-http://localhost:8085/
 
 samuel@p3420:~/src/nerves_system_x86_64/example$ sudo blkid
 /dev/sdc1: SEC_TYPE="msdos" UUID="0021-7A00" TYPE="vfat" PARTUUID="04030201-01"
