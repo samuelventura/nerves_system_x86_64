@@ -17,3 +17,44 @@ build in _build ?
 https://hexdocs.pm/nerves/systems.html#anatomy-of-a-nerves-system
 artifact_sites ?
 build_runner_opts: [make_args: ["PARALLEL_JOBS=8"]],
+
+ERLANG_SOURCE = otp_src_$(ERLANG_VERSION).tar.gz
+
+nerves_system_br/scripts/download-buildroot.sh
+NERVES_BR_VERSION=2022.05
+TARBALL_NAME=buildroot-$NERVES_BR_VERSION.tar.gz
+DOWNLOAD_URL=https://buildroot.org/downloads/$TARBALL_NAME
+
+create a patch against all the buildroot package
+
+#all packages under ~/src
+cd ~src/buildroot
+git checkout tags/2022.05
+#edit files
+git diff --cached > ~/src/nerves_system_br/patches/2022.05.patch
+
+https://hexdocs.pm/nerves/0.4.8/systems.html
+https://hexdocs.pm/nerves/0.4.8/systems.html#creating-or-modifying-a-nerves-system-with-buildroot
+http://wsmoak.net/2016/10/17/building-using-custom-nerves-system.html
+
+cd ~/src/nerves_system_br
+./create-build.sh ~/src/nerves_system_x86_64/nerves_defconfig ~/src/nerves_custom_x86_64
+cd ~/src/nerves_custom_x86_64
+make
+make system
+#creates nerves_system_x86_64.tar.gz
+
+samuel@build:~/src/nerves_custom_x86_64$ ls -l
+total 767604
+drwxr-xr-x 241 samuel samuel     12288 jul  5 05:50 build
+drwxr-xr-x  13 samuel samuel      4096 jul  5 05:22 host
+drwxr-xr-x   3 samuel samuel      4096 jul  5 05:50 images
+-rw-r--r--   1 samuel samuel       667 jul  5 05:20 Makefile
+lrwxrwxrwx   1 samuel samuel        50 jul  5 05:50 nerves-env.cmake -> /home/samuel/src/nerves_system_br/nerves-env.cmake
+-rwxr-xr-x   1 samuel samuel      3107 jul  5 05:50 nerves-env.sh
+lrwxrwxrwx   1 samuel samuel        43 jul  5 05:50 nerves.mk -> /home/samuel/src/nerves_system_br/nerves.mk
+-rw-r--r--   1 samuel samuel 785985195 jul  5 05:51 nerves_system_x86_64.tar.gz
+lrwxrwxrwx   1 samuel samuel        41 jul  5 05:50 scripts -> /home/samuel/src/nerves_system_br/scripts
+lrwxrwxrwx   1 samuel samuel        77 jul  5 05:50 staging -> /home/samuel/src/nerves_custom_x86_64/host/x86_64-buildroot-linux-gnu/sysroot
+drwxr-xr-x  19 samuel samuel      4096 jul  4 19:14 target
+

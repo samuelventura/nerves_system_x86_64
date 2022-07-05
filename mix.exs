@@ -42,7 +42,7 @@ defmodule NervesSystemX8664.MixProject do
     [
       type: :system,
       artifact_sites: [
-        {:prefix, "http://build:8080/.nerves/artifacts/"},
+        # {:prefix, "http://build:8080/.nerves/artifacts/"},
         {:github_releases, "#{@github_organization}/#{@app}"}
       ],
       build_runner_opts: build_runner_opts(),
@@ -66,7 +66,7 @@ defmodule NervesSystemX8664.MixProject do
   defp deps do
     [
       {:nerves, "~> 1.5.4 or ~> 1.6.0 or ~> 1.7.15 or ~> 1.8.0", runtime: false},
-      {:nerves_system_br, "1.20.3", runtime: false},
+      {:nerves_system_br, path: "../nerves_system_br", runtime: false},
       {:nerves_toolchain_x86_64_nerves_linux_musl, "~> 1.6.0", runtime: false},
       {:nerves_system_linter, "~> 0.4", only: [:dev, :test], runtime: false},
       {:ex_doc, "~> 0.22", only: :docs, runtime: false}
