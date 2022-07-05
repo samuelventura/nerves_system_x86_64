@@ -59,7 +59,10 @@ defmodule NervesSystemX8664.MixProject do
         {"TARGET_GCC_FLAGS",
          "-m64 -fstack-protector-strong -march=nocona -fPIE -pie -Wl,-z,now -Wl,-z,relro"}
       ],
-      checksum: package_files()
+      checksum: package_files(),
+      artifact_sites: [
+        {:prefix, "http://build:8080/.nerves/artifacts/"}
+      ]
     ]
   end
 
