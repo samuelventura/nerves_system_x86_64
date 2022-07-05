@@ -42,6 +42,7 @@ defmodule NervesSystemX8664.MixProject do
     [
       type: :system,
       artifact_sites: [
+        {:prefix, "http://build:8080/.nerves/artifacts/"},
         {:github_releases, "#{@github_organization}/#{@app}"}
       ],
       build_runner_opts: build_runner_opts(),
@@ -58,10 +59,6 @@ defmodule NervesSystemX8664.MixProject do
         {"TARGET_ABI", "musl"},
         {"TARGET_GCC_FLAGS",
          "-m64 -fstack-protector-strong -march=nocona -fPIE -pie -Wl,-z,now -Wl,-z,relro"}
-      ],
-      checksum: package_files(),
-      artifact_sites: [
-        {:prefix, "http://build:8080/.nerves/artifacts/"}
       ]
     ]
   end
