@@ -18,17 +18,6 @@ make savedefconfig
 make
 exit
 mix nerves.artifact
-#nerves_system_x86_64-portable-1.19.0-0098FAC.tar.gz
-#nerves_system_x86_64-portable-1.20.0-3796BF2.tar.gz
-#nerves_system_x86_64-portable-1.20.0-CBD5942.tar.gz
-#nerves_system_x86_64-portable-1.20.0-6ECBFFC.tar.gz
-#nerves_system_x86_64-portable-1.20.0-FE304C2.tar.gz
-#nerves_system_x86_64-portable-1.20.0-7F23366.tar.gz
-#nerves_system_x86_64-portable-1.20.0-2B723DD.tar.gz
-#nerves_system_x86_64-portable-1.20.0-D322672.tar.gz
-#nerves_system_x86_64-portable-1.20.0-42F9B85.tar.gz
-#nerves_system_x86_64-portable-1.20.0-1A6EF7F.tar.gz
-#nerves_system_x86_64-portable-1.20.0-C1B11C5.tar.gz
 mv *.tar.gz ~/.nerves/artifacts/
 
 mix nerves.new example #no deps

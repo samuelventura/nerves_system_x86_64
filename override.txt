@@ -1,0 +1,19 @@
+- https://hexdocs.pm/nerves/customizing-systems.html
+- https://stackoverflow.com/questions/46080178/buildroot-patches-not-applied-for-overriden-package
+
+Essentially, the flow for a regular package is: download -> extract -> patch -> configure -> build -> install.
+The flow for an overridden package is: rsync -> configure -> build -> install.
+
+https://github.com/nerves-project/nerves
+- mix build tasks
+
+https://github.com/nerves-project/nerves_bootstrap
+- mix project creation task
+- inject initialization code in generated app
+
+https://hexdocs.pm/nerves/compiling-non-beam-code.html
+build in _build ?
+
+https://hexdocs.pm/nerves/systems.html#anatomy-of-a-nerves-system
+artifact_sites ?
+build_runner_opts: [make_args: ["PARALLEL_JOBS=8"]],
