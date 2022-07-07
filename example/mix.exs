@@ -51,6 +51,7 @@ defmodule Example.MixProject do
       cookie: "#{@app}_cookie",
       include_erts: &Nerves.Release.erts/0,
       steps: [&Nerves.Release.init/1, :assemble],
+      applications: [wx: :none],
       strip_beams: Mix.env() == :prod or [keep: ["Docs"]]
     ]
   end
