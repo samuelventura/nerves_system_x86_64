@@ -1,7 +1,7 @@
 defmodule Example.MixProject do
   use Mix.Project
 
-  @app :qtwebeng
+  @app :qtkiosk
   @version "0.1.0"
   @all_targets [:x86_64]
 
@@ -9,8 +9,8 @@ defmodule Example.MixProject do
     [
       app: @app,
       version: @version,
-      elixir: "~> 1.9",
-      archives: [nerves_bootstrap: "~> 1.10"],
+      elixir: "~> 1.11",
+      archives: [nerves_bootstrap: "~> 1.11"],
       start_permanent: Mix.env() == :prod,
       build_embedded: true,
       deps: deps(),
@@ -31,21 +31,21 @@ defmodule Example.MixProject do
   defp deps do
     [
       # Dependencies for all targets
-      {:nerves, "~> 1.7.15", runtime: false},
-      {:shoehorn, "~> 0.8.0"},
-      {:ring_logger, "~> 0.8.3"},
-      {:toolshed, "~> 0.2.13"},
+      {:nerves, "~> 1.7.16 or ~> 1.8.0", runtime: false},
+      {:shoehorn, "~> 0.9.1"},
+      {:ring_logger, "~> 0.8.5"},
+      {:toolshed, "~> 0.2.26"},
 
       # Dependencies for all targets except :host
-      {:nerves_runtime, "~> 0.11.6", targets: @all_targets},
-      {:nerves_pack, "~> 0.6.0", targets: @all_targets},
+      {:nerves_runtime, "~> 0.13.0", targets: @all_targets},
+      {:nerves_pack, "~> 0.7.0", targets: @all_targets},
 
       # Dependencies for specific targets
       # NOTE: It's generally low risk and recommended to follow minor version
       # bumps to Nerves systems. Since these include Linux kernel and Erlang
       # version updates, please review their release notes in case
       # changes to your application are needed.
-      {:nerves_system_x86_64, path: "../", runtime: false, targets: :x86_64}
+      {:nerves_system_x86_64, path: "..", runtime: false, targets: :x86_64}
     ]
   end
 
