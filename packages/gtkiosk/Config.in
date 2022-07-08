@@ -1,0 +1,7 @@
+config BR2_PACKAGE_GTKIOSK
+    bool "gtkiosk"
+    depends on BR2_PACKAGE_LIBGTK3
+    depends on BR2_PACKAGE_WEBKITGTK
+    help
+        gtkiosk package.
+        http://10.77.4.240/

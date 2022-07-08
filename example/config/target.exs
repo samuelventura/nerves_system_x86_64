@@ -20,7 +20,7 @@ config :nerves_runtime, :kernel, use_system_registry: false
 
 config :nerves,
   erlinit: [
-    hostname_pattern: "wxkiosk-%s"
+    hostname_pattern: "gtkiosk-%s"
   ]
 
 # Configure the device for SSH IEx prompt access and firmware updates
@@ -30,6 +30,7 @@ config :nerves,
 
 keys =
   [
+    Path.join([System.user_home!(), ".ssh", "id_rsa.p3420.pub"]),
     Path.join([System.user_home!(), ".ssh", "id_rsa.pub"]),
     Path.join([System.user_home!(), ".ssh", "id_ecdsa.pub"]),
     Path.join([System.user_home!(), ".ssh", "id_ed25519.pub"])
@@ -70,7 +71,7 @@ config :mdns_lite,
   # because otherwise any of the devices may respond to nerves.local leading to
   # unpredictable behavior.
 
-  hosts: [:hostname, "wxkiosk"],
+  hosts: [:hostname, "gtkiosk"],
   ttl: 120,
 
   # Advertise the following services over mDNS.

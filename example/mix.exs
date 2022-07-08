@@ -1,7 +1,7 @@
 defmodule Example.MixProject do
   use Mix.Project
 
-  @app :wxkiosk
+  @app :gtkiosk
   @version "0.1.0"
   @all_targets [:x86_64]
 
@@ -39,7 +39,8 @@ defmodule Example.MixProject do
       # Dependencies for all targets except :host
       {:nerves_runtime, "~> 0.11.6", targets: @all_targets},
       {:nerves_pack, "~> 0.6.0", targets: @all_targets},
-      {:nerves_system_x86_64, path: "../", runtime: false, targets: :x86_64}
+      {:nerves_system_x86_64,
+       path: "../", runtime: false, targets: :x86_64, nerves: [compile: true]}
     ]
   end
 
